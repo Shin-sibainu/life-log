@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html class="light" lang="ja"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>今日のログ | LifeLog</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&amp;family=Inter:wght@300;400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2d3436",
+                        "border-thin": "#f0f0f0",
+                        "sidebar-bg": "#fafafa",
+                    },
+                    fontFamily: {
+                        "sans": ["Inter", "Noto+Sans+JP", "sans-serif"]
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer base {
+            body {
+                @apply font-sans text-slate-700 bg-white;
+            }
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 24;
+            font-size: 20px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            @apply appearance-none w-4 h-4 bg-primary rounded-full;
+        }
+        .border-subtle {
+            border-bottom: 1px solid #f2f2f2;
+        }
+    </style>
+</head>
+<body class="antialiased overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="w-20 lg:w-64 flex-shrink-0 bg-sidebar-bg border-r border-slate-100 flex flex-col transition-all duration-300">
+<div class="p-8 flex flex-col h-full">
+<div class="mb-12 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">radio_button_checked</span>
+<span class="text-sm font-medium tracking-widest hidden lg:block">LIFELOG</span>
+</div>
+<nav class="flex flex-col gap-8">
+<a class="flex items-center gap-4 text-primary font-medium" href="#">
+<span class="material-symbols-outlined">edit_note</span>
+<span class="text-xs tracking-tight hidden lg:block">今日のログ</span>
+</a>
+<a class="flex items-center gap-4 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="text-xs tracking-tight hidden lg:block">カレンダー</span>
+</a>
+<a class="flex items-center gap-4 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-xs tracking-tight hidden lg:block">分析レポート</span>
+</a>
+<a class="flex items-center gap-4 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-xs tracking-tight hidden lg:block">設定</span>
+</a>
+</nav>
+<div class="mt-auto pt-8 border-t border-slate-200/50">
+<div class="hidden lg:block">
+<p class="text-[10px] text-slate-400 uppercase tracking-[0.2em] mb-4">Calendar</p>
+<div class="grid grid-cols-7 gap-1 text-[10px] text-center text-slate-300 mb-2">
+<span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+</div>
+<div class="grid grid-cols-7 gap-1 text-[10px] text-center">
+<span class="text-slate-200">29</span><span class="text-slate-200">30</span>
+<span class="text-slate-500">1</span><span class="text-slate-500">2</span>
+<span class="text-slate-500">3</span><span class="text-slate-500">4</span>
+<span class="text-primary font-bold">5</span>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-grow h-screen overflow-y-auto bg-white">
+<div class="max-w-2xl mx-auto px-8 py-20">
+<header class="mb-20 text-center">
+<h2 class="text-xs text-slate-400 font-light tracking-[0.3em] uppercase mb-2">Wednesday, Oct 23, 2024</h2>
+<h1 class="text-2xl font-light text-slate-800 tracking-tight">今日のログ</h1>
+</header>
+<div class="space-y-24">
+<section>
+<h3 class="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-8 flex items-center gap-2">
+<span class="w-4 h-[1px] bg-slate-200"></span> ToDo リスト
+                        </h3>
+<div class="space-y-2">
+<div class="flex items-start gap-4 py-3 border-subtle group">
+<input checked="" class="mt-1 w-4 h-4 rounded-none border-slate-300 text-slate-400 focus:ring-0" type="checkbox"/>
+<div class="flex-grow">
+<input class="w-full border-none p-0 focus:ring-0 text-sm text-slate-400 line-through font-light bg-transparent" type="text" value="アーキテクチャのドキュメント作成"/>
+</div>
+</div>
+<div class="flex items-start gap-4 py-3 border-subtle group">
+<input class="mt-1 w-4 h-4 rounded-none border-slate-300 text-primary focus:ring-0" type="checkbox"/>
+<div class="flex-grow">
+<input class="w-full border-none p-0 focus:ring-0 text-sm text-slate-700 font-light bg-transparent" type="text" value="UIデザインのミニマル化対応"/>
+</div>
+</div>
+<div class="flex items-start gap-4 py-3 border-subtle group">
+<span class="material-symbols-outlined text-slate-300 mt-0.5">add</span>
+<input class="w-full border-none p-0 focus:ring-0 text-sm text-slate-400 font-light placeholder:text-slate-200 bg-transparent" placeholder="タスクを追加..." type="text"/>
+</div>
+</div>
+</section>
+<section>
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-[11px] font-medium text-slate-400 uppercase tracking-widest flex items-center gap-2">
+<span class="w-4 h-[1px] bg-slate-200"></span> 自由記述
+                            </h3>
+<div class="flex gap-4">
+<button class="text-[10px] tracking-tighter text-primary border-b border-primary pb-0.5">仕事</button>
+<button class="text-[10px] tracking-tighter text-slate-300 hover:text-slate-500 transition-colors">学習</button>
+<button class="text-[10px] tracking-tighter text-slate-300 hover:text-slate-500 transition-colors">生活</button>
+</div>
+</div>
+<div class="relative">
+<textarea class="w-full p-0 border-none focus:ring-0 text-sm leading-relaxed text-slate-600 font-light placeholder:text-slate-200 resize-none bg-transparent" placeholder="今日はどのような一日でしたか？" rows="8"></textarea>
+<div class="absolute bottom-0 right-0 py-2">
+<span class="text-[10px] text-slate-300">自動保存済み</span>
+</div>
+</div>
+</section>
+<section>
+<h3 class="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-8 flex items-center gap-2">
+<span class="w-4 h-[1px] bg-slate-200"></span> 参考リンク
+                        </h3>
+<div class="grid grid-cols-1 gap-2">
+<div class="flex items-center justify-between py-3 border-subtle group hover:bg-slate-50 px-2 -mx-2 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-300">link</span>
+<span class="text-sm font-light text-slate-600">ミニマリズムと集中力の関係性について</span>
+</div>
+<span class="text-[10px] text-slate-300 font-light group-hover:text-slate-400">blog.example.com</span>
+</div>
+<div class="flex items-center gap-3 py-3 border-subtle text-slate-300 cursor-pointer hover:text-slate-400 transition-colors">
+<span class="material-symbols-outlined">add_link</span>
+<span class="text-sm font-light">リンクを追加</span>
+</div>
+</div>
+</section>
+<section class="pb-20">
+<div class="flex flex-col items-center gap-12">
+<div class="text-center">
+<h3 class="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-1">今日の満足度</h3>
+<p class="text-[28px] font-light text-primary">8 <span class="text-xs text-slate-300">/ 10</span></p>
+</div>
+<div class="w-full px-4">
+<input class="w-full h-[1px] bg-slate-200 appearance-none cursor-pointer outline-none" max="10" min="1" type="range" value="8"/>
+<div class="flex justify-between mt-4 text-[9px] text-slate-300 uppercase tracking-widest font-light">
+<span>Low</span>
+<span>High</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<div class="fixed bottom-12 right-12">
+<button class="bg-primary text-white text-[11px] font-medium tracking-[0.2em] px-10 py-4 hover:opacity-90 transition-opacity flex items-center gap-3">
+                        ログを保存
+                        <span class="material-symbols-outlined !text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>
