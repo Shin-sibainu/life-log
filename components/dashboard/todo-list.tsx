@@ -33,10 +33,12 @@ export function TodoList({ todos, onAdd, onUpdate, onDelete }: TodoListProps) {
 
   return (
     <section>
-      <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-4 flex items-center gap-2">
-        <span className="size-4 border-b border-slate-300" />
-        ToDo リスト
-      </h3>
+      <div className="flex items-center justify-between mb-4 min-h-[34px]">
+        <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wide flex items-center gap-2">
+          <span className="size-4 border-b border-slate-300" />
+          ToDo リスト
+        </h3>
+      </div>
       <div className="border border-slate-200 rounded-lg divide-y divide-slate-100">
         {todos.map((todo) => (
           <div
@@ -69,8 +71,12 @@ export function TodoList({ todos, onAdd, onUpdate, onDelete }: TodoListProps) {
           </div>
         ))}
         {todos.length === 0 && (
-          <div className="px-4 py-6 text-center text-sm text-slate-400">
-            タスクがありません
+          <div className="px-4 py-8 text-center">
+            <div className="inline-flex items-center justify-center size-12 rounded-full bg-slate-50 mb-3">
+              <span className="material-symbols-outlined text-slate-300 !text-2xl">checklist</span>
+            </div>
+            <p className="text-sm text-slate-500 mb-1">今日のタスクを追加しよう</p>
+            <p className="text-xs text-slate-400">小さな一歩が大きな成果につながります</p>
           </div>
         )}
         <div className="flex items-start gap-4 px-4 py-3 hover:bg-slate-50/50 cursor-text">

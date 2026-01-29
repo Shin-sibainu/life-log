@@ -1,10 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { AuthModal } from '@/components/auth-modal';
+import { useSession } from '@/lib/auth-client';
 
 export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const { data: session, isPending } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isPending && session?.user) {
+      router.replace('/dashboard');
+    }
+  }, [session, isPending, router]);
+
+  // Show loading while checking auth
+  if (isPending) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-slate-500">読み込み中...</div>
+      </div>
+    );
+  }
+
+  // If logged in, don't render LP (will redirect)
+  if (session?.user) {
+    return null;
+  }
 
   return (
     <>

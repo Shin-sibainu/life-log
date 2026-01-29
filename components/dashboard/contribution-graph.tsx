@@ -89,7 +89,8 @@ export function ContributionGraph({ entries }: ContributionGraphProps) {
     return map;
   }, [entries]);
 
-  const weeks = useMemo(() => getWeeksArray(53), []);
+  // Reverse the weeks so most recent is on the left
+  const weeks = useMemo(() => getWeeksArray(53).reverse(), []);
 
   const totalDays = entries.length;
   const currentStreak = useMemo(() => {

@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 const navigation = [
   { name: '今日のログ', href: '/dashboard', icon: 'edit_note' },
-  { name: 'カレンダー', href: '/calendar', icon: 'calendar_today' },
+  { name: '積み重ね', href: '/calendar', icon: 'local_fire_department' },
   { name: '分析レポート', href: '/analytics', icon: 'bar_chart' },
   { name: '設定', href: '/settings', icon: 'settings' },
 ];
@@ -53,6 +53,7 @@ export function Sidebar() {
 }
 
 function MiniCalendar() {
+  const router = useRouter();
   const today = new Date();
   const currentDay = today.getDate();
   const year = today.getFullYear();
@@ -61,24 +62,38 @@ function MiniCalendar() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const daysInPrevMonth = new Date(year, month, 0).getDate();
 
-  const days: { day: number; isCurrentMonth: boolean; isToday: boolean }[] = [];
+  const days: { day: number; isCurrentMonth: boolean; isToday: boolean; isFuture: boolean; date: string }[] = [];
 
   // Previous month days
+  const prevMonth = month === 0 ? 11 : month - 1;
+  const prevYear = month === 0 ? year - 1 : year;
   for (let i = firstDayOfMonth - 1; i >= 0; i--) {
-    days.push({ day: daysInPrevMonth - i, isCurrentMonth: false, isToday: false });
+    const day = daysInPrevMonth - i;
+    const dateStr = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    days.push({ day, isCurrentMonth: false, isToday: false, isFuture: false, date: dateStr });
   }
 
   // Current month days
   for (let i = 1; i <= daysInMonth; i++) {
-    days.push({ day: i, isCurrentMonth: true, isToday: i === currentDay });
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    const isFuture = i > currentDay;
+    days.push({ day: i, isCurrentMonth: true, isToday: i === currentDay, isFuture, date: dateStr });
   }
 
   // Next month days to fill the grid (up to 35 or 42 days total for 5-6 rows)
   const totalCells = days.length <= 35 ? 35 : 42;
   const remainingDays = totalCells - days.length;
+  const nextMonth = month === 11 ? 0 : month + 1;
+  const nextYear = month === 11 ? year + 1 : year;
   for (let i = 1; i <= remainingDays; i++) {
-    days.push({ day: i, isCurrentMonth: false, isToday: false });
+    const dateStr = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    days.push({ day: i, isCurrentMonth: false, isToday: false, isFuture: true, date: dateStr });
   }
+
+  const handleDayClick = (d: typeof days[0]) => {
+    if (d.isFuture) return;
+    router.push(`/dashboard?date=${d.date}`);
+  };
 
   return (
     <>
@@ -87,18 +102,22 @@ function MiniCalendar() {
       </div>
       <div className="grid grid-cols-7 gap-1 text-[9px] text-center">
         {days.map((d, i) => (
-          <span
+          <button
             key={i}
-            className={`py-0.5 ${
+            onClick={() => handleDayClick(d)}
+            disabled={d.isFuture}
+            className={`py-0.5 rounded-full transition-colors ${
               d.isToday
-                ? 'bg-[#2d3436] text-white rounded-full font-medium'
-                : d.isCurrentMonth
-                  ? 'text-slate-500'
-                  : 'text-slate-200'
+                ? 'bg-[#2d3436] text-white font-medium'
+                : d.isFuture
+                  ? 'text-slate-200 cursor-not-allowed'
+                  : d.isCurrentMonth
+                    ? 'text-slate-500 hover:bg-slate-200'
+                    : 'text-slate-300 hover:bg-slate-100'
             }`}
           >
             {d.day}
-          </span>
+          </button>
         ))}
       </div>
     </>

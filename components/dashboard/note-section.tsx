@@ -81,7 +81,7 @@ export function NoteSection({ notes, categories, onAdd, onUpdate, onDelete, onAd
 
   return (
     <section>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 min-h-[34px]">
         <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wide flex items-center gap-2">
           <span className="size-4 border-b border-slate-300" />
           自由記述

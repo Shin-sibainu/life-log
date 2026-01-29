@@ -87,8 +87,12 @@ export function LinkSection({ links, onAdd, onUpdate, onDelete }: LinkSectionPro
         ))}
 
         {links.length === 0 && !isAdding && (
-          <div className="px-4 py-6 text-center text-sm text-slate-400">
-            リンクがありません
+          <div className="px-4 py-8 text-center">
+            <div className="inline-flex items-center justify-center size-12 rounded-full bg-slate-50 mb-3">
+              <span className="material-symbols-outlined text-slate-300 !text-2xl">bookmark</span>
+            </div>
+            <p className="text-sm text-slate-500 mb-1">参考になったリンクを保存</p>
+            <p className="text-xs text-slate-400">記事や動画などを記録しておこう</p>
           </div>
         )}
 

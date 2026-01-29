@@ -88,7 +88,7 @@ export default function TryPage() {
           onAddLink={localEntry.addLink}
           onUpdateLink={localEntry.updateLink}
           onDeleteLink={localEntry.deleteLink}
-          onSave={handleSave}
+          completedTodayCount={localEntry.entry.todos.filter(t => t.isCompleted).length}
         />
       </main>
 

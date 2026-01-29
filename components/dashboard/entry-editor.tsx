@@ -31,6 +31,9 @@ interface EntryEditorProps {
   isDirty?: boolean;
   lastSaved?: Date | null;
   onAddCategory?: (name: string, color?: string) => Promise<Category | null>;
+  onDateChange?: (date: string) => void;
+  currentStreak?: number;
+  completedTodayCount?: number;
 }
 
 function formatLastSaved(date: Date | null | undefined): string {
@@ -60,16 +63,19 @@ export function EntryEditor({
   onAddLink,
   onUpdateLink,
   onDeleteLink,
-  onSave,
   isSaving,
   isDirty,
   lastSaved,
   onAddCategory,
+  onDateChange,
+  currentStreak = 0,
+  completedTodayCount = 0,
 }: EntryEditorProps) {
   const dateObj = new Date(entry.date + 'T00:00:00');
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const isToday = dateObj.getTime() === today.getTime();
+  const isFuture = dateObj.getTime() > today.getTime();
 
   const formattedDateEn = dateObj.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -80,27 +86,82 @@ export function EntryEditor({
 
   const getSaveStatus = () => {
     if (isSaving) return { text: '保存中...', color: 'text-amber-500' };
-    if (isDirty) return { text: '未保存の変更あり', color: 'text-amber-500' };
+    if (isDirty) return { text: '未保存', color: 'text-amber-500' };
     if (lastSaved) return { text: formatLastSaved(lastSaved), color: 'text-slate-400' };
-    return null;
+    return { text: '自動保存', color: 'text-slate-300' };
   };
 
   const saveStatus = getSaveStatus();
 
+  // Format date as YYYY-MM-DD in local timezone
+  const formatDateLocal = (d: Date) => {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const todayStr = formatDateLocal(today);
+
+  const goToPrevDay = () => {
+    const prevDate = new Date(dateObj);
+    prevDate.setDate(prevDate.getDate() - 1);
+    onDateChange?.(formatDateLocal(prevDate));
+  };
+
+  const goToNextDay = () => {
+    const nextDate = new Date(dateObj);
+    nextDate.setDate(nextDate.getDate() + 1);
+    const nextDateStr = formatDateLocal(nextDate);
+    // Allow navigation up to today
+    if (nextDateStr <= todayStr) {
+      onDateChange?.(nextDateStr);
+    }
+  };
+
+  const goToToday = () => {
+    onDateChange?.(todayStr);
+  };
+
   return (
-    <div className="max-w-5xl mx-auto px-8 py-20">
-      <header className="mb-16 text-center">
-        <h2 className="text-xs text-slate-500 uppercase mb-2">
-          {formattedDateEn}
-        </h2>
-        <h1 className="text-2xl font-light text-slate-900 text-balance">
-          {isToday ? '今日のログ' : `${dateObj.getMonth() + 1}月${dateObj.getDate()}日のログ`}
-        </h1>
+    <div className="max-w-6xl mx-auto px-8 py-12">
+      {/* Date Navigation */}
+      <header className="mb-12 text-center">
+        <div className="flex items-center justify-center gap-4 mb-3">
+          <button
+            onClick={goToPrevDay}
+            className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+            aria-label="前日"
+          >
+            <span className="material-symbols-outlined text-slate-400 !text-xl">chevron_left</span>
+          </button>
+          <div>
+            <h2 className="text-xs text-slate-400 uppercase tracking-wide">
+              {formattedDateEn}
+            </h2>
+            <h1 className="text-2xl font-light text-slate-900">
+              {isToday ? '今日のログ' : `${dateObj.getMonth() + 1}月${dateObj.getDate()}日のログ`}
+            </h1>
+          </div>
+          <button
+            onClick={goToNextDay}
+            disabled={isToday}
+            className={`p-2 rounded-full transition-colors ${isToday ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-100'}`}
+            aria-label="翌日"
+          >
+            <span className="material-symbols-outlined text-slate-400 !text-xl">chevron_right</span>
+          </button>
+        </div>
+        {!isToday && (
+          <button
+            onClick={goToToday}
+            className="text-xs text-slate-500 hover:text-slate-700 underline underline-offset-2"
+          >
+            今日に戻る
+          </button>
+        )}
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
-        {/* Left Column - Todo & Links */}
-        <div className="space-y-16">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-16">
+        {/* Left Column - Todo & Links (1/3) */}
+        <div className="space-y-12 lg:col-span-1">
           <TodoList
             todos={entry.todos}
             onAdd={onAddTodo}
@@ -116,8 +177,8 @@ export function EntryEditor({
           />
         </div>
 
-        {/* Right Column - Notes & Score */}
-        <div className="space-y-16">
+        {/* Right Column - Notes & Score (2/3) */}
+        <div className="space-y-12 lg:col-span-2">
           <NoteSection
             notes={entry.notes}
             categories={categories}
@@ -136,19 +197,6 @@ export function EntryEditor({
         </div>
       </div>
 
-      <div className="fixed bottom-8 right-8 flex items-center gap-4">
-        {saveStatus && (
-          <span className={`text-xs ${saveStatus.color}`}>{saveStatus.text}</span>
-        )}
-        <button
-          onClick={onSave}
-          disabled={isSaving}
-          className="bg-slate-900 text-white text-xs font-medium px-8 py-3 rounded-lg hover:bg-slate-800 transition-colors flex items-center gap-2 disabled:opacity-50 shadow-lg"
-        >
-          {isSaving ? '保存中...' : 'ログを保存'}
-          <span className="material-symbols-outlined !text-sm">arrow_forward</span>
-        </button>
-      </div>
     </div>
   );
 }
