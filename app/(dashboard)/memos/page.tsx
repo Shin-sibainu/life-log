@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from '@/lib/auth-client';
+import { MarkdownEditor } from '@/components/memo/markdown-editor';
 
 interface MemoCategory {
   id: string;
@@ -26,12 +27,16 @@ export default function MemosPage() {
   const { data: session, isPending } = useSession();
   const [categories, setCategories] = useState<MemoCategory[]>([]);
   const [memos, setMemos] = useState<Memo[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedMemo, setSelectedMemo] = useState<Memo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [showMarkdownHelp, setShowMarkdownHelp] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [addingMemoToCategoryId, setAddingMemoToCategoryId] = useState<string | null | undefined>(undefined);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   // Fetch categories
   const fetchCategories = useCallback(async () => {
@@ -46,13 +51,10 @@ export default function MemosPage() {
     }
   }, []);
 
-  // Fetch memos
-  const fetchMemos = useCallback(async (categoryId?: string | null) => {
+  // Fetch all memos
+  const fetchMemos = useCallback(async () => {
     try {
-      const url = categoryId
-        ? `/api/memos?categoryId=${categoryId}`
-        : '/api/memos';
-      const res = await fetch(url);
+      const res = await fetch('/api/memos');
       if (res.ok) {
         const data = await res.json();
         setMemos(data.memos);
@@ -93,7 +95,7 @@ export default function MemosPage() {
   };
 
   // Create new memo
-  const handleCreateMemo = async () => {
+  const handleCreateMemo = async (categoryId?: string | null) => {
     try {
       const res = await fetch('/api/memos', {
         method: 'POST',
@@ -101,22 +103,44 @@ export default function MemosPage() {
         body: JSON.stringify({
           title: '無題のメモ',
           content: '',
-          categoryId: selectedCategoryId,
+          categoryId: categoryId ?? null,
         }),
       });
       if (res.ok) {
         const data = await res.json();
         const newMemo = {
           ...data.memo,
-          categoryName: categories.find((c) => c.id === selectedCategoryId)?.name || null,
-          categoryColor: categories.find((c) => c.id === selectedCategoryId)?.color || null,
+          categoryName: categories.find((c) => c.id === categoryId)?.name || null,
+          categoryColor: categories.find((c) => c.id === categoryId)?.color || null,
         };
         setMemos((prev) => [newMemo, ...prev]);
         setSelectedMemo(newMemo);
+        // Expand the category if adding to one
+        if (categoryId) {
+          setExpandedCategories((prev) => new Set([...prev, categoryId]));
+        }
       }
     } catch (error) {
       console.error('Failed to create memo:', error);
     }
+  };
+
+  // Toggle category expansion
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+      return next;
+    });
+  };
+
+  // Get memos for a category
+  const getMemosByCategory = (categoryId: string | null) => {
+    return memos.filter((m) => m.categoryId === categoryId);
   };
 
   // Update memo
@@ -140,6 +164,10 @@ export default function MemosPage() {
           prev.map((m) => (m.id === selectedMemo.id ? updatedMemo : m))
         );
         setSelectedMemo(updatedMemo);
+        // Expand the new category if category changed
+        if (updates.categoryId && updates.categoryId !== selectedMemo.categoryId) {
+          setExpandedCategories((prev) => new Set([...prev, updates.categoryId as string]));
+        }
       }
     } catch (error) {
       console.error('Failed to update memo:', error);
@@ -163,12 +191,8 @@ export default function MemosPage() {
     }
   };
 
-  // Filter memos by category
-  const handleCategorySelect = (categoryId: string | null) => {
-    setSelectedCategoryId(categoryId);
-    setSelectedMemo(null);
-    fetchMemos(categoryId);
-  };
+  // Get uncategorized memos
+  const uncategorizedMemos = getMemosByCategory(null);
 
   if (isPending || isLoading) {
     return (
@@ -186,129 +210,171 @@ export default function MemosPage() {
     );
   }
 
-  return (
-    <div className="flex h-full">
-      {/* Categories Sidebar */}
-      <div className="w-48 border-r border-slate-200 bg-slate-50 flex flex-col">
-        <div className="p-4 border-b border-slate-200">
-          <h2 className="text-xs font-medium text-slate-500 uppercase tracking-wide">カテゴリ</h2>
-        </div>
-        <div className="flex-1 overflow-y-auto p-2">
-          <button
-            onClick={() => handleCategorySelect(null)}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-              selectedCategoryId === null
-                ? 'bg-slate-200 text-slate-900'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            すべて
-          </button>
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => handleCategorySelect(category.id)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
-                selectedCategoryId === category.id
-                  ? 'bg-slate-200 text-slate-900'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {category.color && (
-                <span
-                  className="size-2 rounded-full"
-                  style={{ backgroundColor: category.color }}
-                />
-              )}
-              {category.name}
-            </button>
-          ))}
-          {isAddingCategory ? (
-            <div className="mt-2 px-1">
-              <input
-                type="text"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAddCategory();
-                  if (e.key === 'Escape') {
-                    setIsAddingCategory(false);
-                    setNewCategoryName('');
-                  }
-                }}
-                placeholder="カテゴリ名"
-                className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-slate-400"
-                autoFocus
-              />
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsAddingCategory(true)}
-              className="w-full text-left px-3 py-2 text-sm text-slate-400 hover:text-slate-600 flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined !text-base">add</span>
-              カテゴリを追加
-            </button>
-          )}
-        </div>
-      </div>
+  // Handle memo selection on mobile (close sidebar)
+  const handleMemoSelect = (memo: Memo) => {
+    setSelectedMemo(memo);
+    setShowSidebar(false);
+  };
 
-      {/* Memos List */}
-      <div className="w-64 border-r border-slate-200 flex flex-col">
+  return (
+    <div className="flex h-full relative">
+      {/* Mobile overlay */}
+      {showSidebar && (
+        <div
+          className="fixed inset-0 bg-black/20 z-20 lg:hidden"
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
+
+      {/* Tree Sidebar */}
+      <div className={`
+        fixed lg:relative inset-y-0 left-0 z-30
+        w-72 border-r border-slate-200 bg-slate-50 flex flex-col
+        transform transition-transform duration-200 ease-in-out
+        ${showSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
         <div className="p-4 border-b border-slate-200 flex items-center justify-between">
           <h2 className="text-xs font-medium text-slate-500 uppercase tracking-wide">メモ</h2>
-          <button
-            onClick={handleCreateMemo}
-            className="p-1 rounded hover:bg-slate-100"
-            title="新規メモ"
-          >
-            <span className="material-symbols-outlined text-slate-500 !text-xl">add</span>
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                handleCreateMemo(null);
+                setShowSidebar(false);
+              }}
+              className="p-1 rounded hover:bg-slate-100"
+              title="新規メモ"
+            >
+              <span className="material-symbols-outlined text-slate-500 !text-lg">add</span>
+            </button>
+            <button
+              onClick={() => setShowSidebar(false)}
+              className="p-1 rounded hover:bg-slate-100 lg:hidden"
+            >
+              <span className="material-symbols-outlined text-slate-500 !text-lg">close</span>
+            </button>
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
-          {memos.length === 0 ? (
-            <div className="p-4 text-center">
-              <p className="text-sm text-slate-400">メモがありません</p>
-              <button
-                onClick={handleCreateMemo}
-                className="mt-2 text-sm text-slate-600 hover:text-slate-900 underline"
-              >
-                新規作成
-              </button>
-            </div>
-          ) : (
-            memos.map((memo) => (
-              <button
-                key={memo.id}
-                onClick={() => setSelectedMemo(memo)}
-                className={`w-full text-left p-3 border-b border-slate-100 hover:bg-slate-50 transition-colors ${
-                  selectedMemo?.id === memo.id ? 'bg-slate-100' : ''
-                }`}
-              >
-                <p className="text-sm font-medium text-slate-900 truncate">{memo.title}</p>
-                <p className="text-xs text-slate-400 mt-1">{memo.date}</p>
-                {memo.categoryName && (
-                  <span className="inline-flex items-center gap-1 mt-1 text-xs text-slate-500">
-                    {memo.categoryColor && (
-                      <span
-                        className="size-1.5 rounded-full"
-                        style={{ backgroundColor: memo.categoryColor }}
-                      />
+        <div className="flex-1 overflow-y-auto p-2">
+          {/* Categories with memos */}
+          {categories.map((category) => {
+            const categoryMemos = getMemosByCategory(category.id);
+            const isExpanded = expandedCategories.has(category.id);
+            return (
+              <div key={category.id} className="mb-1">
+                {/* Category header */}
+                <div className="flex items-center group">
+                  <button
+                    onClick={() => toggleCategory(category.id)}
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm text-slate-700 hover:bg-slate-100 flex-1 text-left"
+                  >
+                    <span className="material-symbols-outlined !text-base text-slate-400">
+                      {isExpanded ? 'expand_more' : 'chevron_right'}
+                    </span>
+                    <span className="material-symbols-outlined !text-base text-slate-400">folder</span>
+                    <span className="truncate">{category.name}</span>
+                    <span className="text-xs text-slate-400 ml-auto">{categoryMemos.length}</span>
+                  </button>
+                  <button
+                    onClick={() => handleCreateMemo(category.id)}
+                    className="p-1 rounded hover:bg-slate-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="このカテゴリにメモを追加"
+                  >
+                    <span className="material-symbols-outlined text-slate-400 !text-base">add</span>
+                  </button>
+                </div>
+                {/* Memos in category */}
+                {isExpanded && (
+                  <div className="ml-4 border-l border-slate-200 pl-2">
+                    {categoryMemos.length === 0 ? (
+                      <p className="text-xs text-slate-400 py-2 pl-2">メモがありません</p>
+                    ) : (
+                      categoryMemos.map((memo) => (
+                        <button
+                          key={memo.id}
+                          onClick={() => handleMemoSelect(memo)}
+                          className={`w-full text-left px-2 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                            selectedMemo?.id === memo.id
+                              ? 'bg-slate-200 text-slate-900'
+                              : 'text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined !text-base text-slate-400">description</span>
+                          <span className="truncate">{memo.title}</span>
+                        </button>
+                      ))
                     )}
-                    {memo.categoryName}
-                  </span>
+                  </div>
                 )}
-              </button>
-            ))
+              </div>
+            );
+          })}
+
+          {/* Uncategorized memos */}
+          {uncategorizedMemos.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-slate-200">
+              <p className="text-xs text-slate-400 px-2 mb-1">未分類</p>
+              {uncategorizedMemos.map((memo) => (
+                <button
+                  key={memo.id}
+                  onClick={() => setSelectedMemo(memo)}
+                  className={`w-full text-left px-2 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                    selectedMemo?.id === memo.id
+                      ? 'bg-slate-200 text-slate-900'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="material-symbols-outlined !text-base text-slate-400">description</span>
+                  <span className="truncate">{memo.title}</span>
+                </button>
+              ))}
+            </div>
           )}
+
+          {/* Add category button */}
+          <div className="mt-2 pt-2 border-t border-slate-200">
+            {isAddingCategory ? (
+              <div className="px-1">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddCategory();
+                    if (e.key === 'Escape') {
+                      setIsAddingCategory(false);
+                      setNewCategoryName('');
+                    }
+                  }}
+                  placeholder="カテゴリ名"
+                  className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-slate-400"
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsAddingCategory(true)}
+                className="w-full text-left px-2 py-1.5 text-sm text-slate-400 hover:text-slate-600 flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined !text-base">create_new_folder</span>
+                カテゴリを追加
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Memo Editor */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {selectedMemo ? (
           <>
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+            <div className="p-3 md:p-4 border-b border-slate-200 flex items-center gap-2">
+              <button
+                onClick={() => setShowSidebar(true)}
+                className="p-1.5 rounded hover:bg-slate-100 lg:hidden flex-shrink-0"
+                title="メモ一覧"
+              >
+                <span className="material-symbols-outlined text-slate-500 !text-xl">menu</span>
+              </button>
               <input
                 type="text"
                 value={selectedMemo.title}
@@ -316,23 +382,96 @@ export default function MemosPage() {
                   setSelectedMemo({ ...selectedMemo, title: e.target.value });
                 }}
                 onBlur={() => handleUpdateMemo({ title: selectedMemo.title })}
-                className="text-lg font-medium text-slate-900 bg-transparent border-none outline-none flex-1"
+                className="text-base md:text-lg font-medium text-slate-900 bg-transparent border-none outline-none flex-1 min-w-0"
                 placeholder="タイトル"
               />
               <div className="flex items-center gap-2">
                 {isSaving && (
                   <span className="text-xs text-slate-400">保存中...</span>
                 )}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowMarkdownHelp(!showMarkdownHelp)}
+                    className={`p-1.5 rounded transition-colors ${
+                      showMarkdownHelp
+                        ? 'bg-slate-200 text-slate-700'
+                        : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
+                    }`}
+                    title="マークダウンの書き方"
+                  >
+                    <span className="material-symbols-outlined !text-xl">help_outline</span>
+                  </button>
+                  {showMarkdownHelp && (
+                    <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-slate-200 rounded-lg shadow-lg z-10 p-4">
+                      <h4 className="font-medium text-slate-900 mb-3 text-sm">マークダウンの書き方</h4>
+                      <div className="space-y-2 text-xs text-slate-600">
+                        <div className="flex justify-between">
+                          <code className="bg-slate-100 px-1.5 py-0.5 rounded"># 見出し1</code>
+                          <span className="text-slate-400">大見出し</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <code className="bg-slate-100 px-1.5 py-0.5 rounded">## 見出し2</code>
+                          <span className="text-slate-400">中見出し</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <code className="bg-slate-100 px-1.5 py-0.5 rounded">### 見出し3</code>
+                          <span className="text-slate-400">小見出し</span>
+                        </div>
+                        <div className="border-t border-slate-100 my-2" />
+                        <div className="flex justify-between">
+                          <code className="bg-slate-100 px-1.5 py-0.5 rounded">**太字**</code>
+                          <span className="text-slate-400">太字</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <code className="bg-slate-100 px-1.5 py-0.5 rounded">*斜体*</code>
+                          <span className="text-slate-400">斜体</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <code className="bg-slate-100 px-1.5 py-0.5 rounded">~~取消~~</code>
+                          <span className="text-slate-400">取り消し線</span>
+                        </div>
+                        <div className="border-t border-slate-100 my-2" />
+                        <div className="flex justify-between">
+                          <code className="bg-slate-100 px-1.5 py-0.5 rounded">- リスト</code>
+                          <span className="text-slate-400">箇条書き</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <code className="bg-slate-100 px-1.5 py-0.5 rounded">1. 番号</code>
+                          <span className="text-slate-400">番号付き</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <code className="bg-slate-100 px-1.5 py-0.5 rounded">&gt; 引用</code>
+                          <span className="text-slate-400">引用</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <code className="bg-slate-100 px-1.5 py-0.5 rounded">`コード`</code>
+                          <span className="text-slate-400">コード</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <code className="bg-slate-100 px-1.5 py-0.5 rounded">---</code>
+                          <span className="text-slate-400">水平線</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setIsExpanded(true)}
+                  className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 hidden md:block"
+                  title="拡大表示"
+                >
+                  <span className="material-symbols-outlined !text-xl">zoom_out_map</span>
+                </button>
                 <button
                   onClick={() => handleDeleteMemo(selectedMemo.id)}
-                  className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500"
+                  className="p-1.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-500"
                   title="削除"
                 >
                   <span className="material-symbols-outlined !text-xl">delete</span>
                 </button>
               </div>
             </div>
-            <div className="p-4 border-b border-slate-100 flex items-center gap-4">
+            <div className="px-3 md:px-4 py-2 md:py-3 border-b border-slate-100 flex flex-wrap items-center gap-2 md:gap-4">
               <select
                 value={selectedMemo.categoryId || ''}
                 onChange={(e) => {
@@ -340,7 +479,7 @@ export default function MemosPage() {
                   setSelectedMemo({ ...selectedMemo, categoryId: newCategoryId });
                   handleUpdateMemo({ categoryId: newCategoryId });
                 }}
-                className="text-sm text-slate-600 border border-slate-200 rounded px-2 py-1 bg-white"
+                className="text-sm text-slate-600 border border-slate-200 rounded px-2 py-1.5 bg-white"
               >
                 <option value="">カテゴリなし</option>
                 {categories.map((cat) => (
@@ -356,30 +495,153 @@ export default function MemosPage() {
                   setSelectedMemo({ ...selectedMemo, date: e.target.value });
                   handleUpdateMemo({ date: e.target.value });
                 }}
-                className="text-sm text-slate-600 border border-slate-200 rounded px-2 py-1"
+                className="text-sm text-slate-600 border border-slate-200 rounded px-2 py-1.5"
               />
             </div>
-            <div className="flex-1 p-4">
-              <textarea
-                value={selectedMemo.content}
-                onChange={(e) => {
-                  setSelectedMemo({ ...selectedMemo, content: e.target.value });
+            <div className="flex-1 p-3 md:p-4 overflow-auto">
+              <MarkdownEditor
+                content={selectedMemo.content}
+                onChange={(content) => {
+                  setSelectedMemo({ ...selectedMemo, content });
                 }}
                 onBlur={() => handleUpdateMemo({ content: selectedMemo.content })}
-                className="w-full h-full resize-none border-none outline-none text-sm text-slate-700 leading-relaxed"
-                placeholder="メモを入力..."
+                placeholder="メモを入力... (見出しは # や ## で始めます)"
               />
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <span className="material-symbols-outlined text-slate-200 !text-6xl">edit_note</span>
-              <p className="mt-4 text-sm text-slate-400">メモを選択または作成してください</p>
+          <div className="flex-1 flex flex-col">
+            {/* Mobile header */}
+            <div className="p-3 border-b border-slate-200 lg:hidden">
+              <button
+                onClick={() => setShowSidebar(true)}
+                className="p-1.5 rounded hover:bg-slate-100"
+                title="メモ一覧"
+              >
+                <span className="material-symbols-outlined text-slate-500 !text-xl">menu</span>
+              </button>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center px-4">
+                <span className="material-symbols-outlined text-slate-200 !text-6xl">edit_note</span>
+                <p className="mt-4 text-sm text-slate-400">メモを選択または作成してください</p>
+                <button
+                  onClick={() => setShowSidebar(true)}
+                  className="mt-4 text-sm text-slate-600 hover:text-slate-900 underline lg:hidden"
+                >
+                  メモ一覧を開く
+                </button>
+              </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Expanded Editor Modal */}
+      {isExpanded && selectedMemo && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+            <input
+              type="text"
+              value={selectedMemo.title}
+              onChange={(e) => {
+                setSelectedMemo({ ...selectedMemo, title: e.target.value });
+              }}
+              onBlur={() => handleUpdateMemo({ title: selectedMemo.title })}
+              className="text-xl font-medium text-slate-900 bg-transparent border-none outline-none flex-1"
+              placeholder="タイトル"
+            />
+            <div className="flex items-center gap-2">
+              {isSaving && (
+                <span className="text-xs text-slate-400">保存中...</span>
+              )}
+              <div className="relative">
+                <button
+                  onClick={() => setShowMarkdownHelp(!showMarkdownHelp)}
+                  className={`p-2 rounded transition-colors ${
+                    showMarkdownHelp
+                      ? 'bg-slate-200 text-slate-700'
+                      : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
+                  }`}
+                  title="マークダウンの書き方"
+                >
+                  <span className="material-symbols-outlined !text-xl">help_outline</span>
+                </button>
+                {showMarkdownHelp && (
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-slate-200 rounded-lg shadow-lg z-10 p-4">
+                    <h4 className="font-medium text-slate-900 mb-3 text-sm">マークダウンの書き方</h4>
+                    <div className="space-y-2 text-xs text-slate-600">
+                      <div className="flex justify-between">
+                        <code className="bg-slate-100 px-1.5 py-0.5 rounded"># 見出し1</code>
+                        <span className="text-slate-400">大見出し</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <code className="bg-slate-100 px-1.5 py-0.5 rounded">## 見出し2</code>
+                        <span className="text-slate-400">中見出し</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <code className="bg-slate-100 px-1.5 py-0.5 rounded">### 見出し3</code>
+                        <span className="text-slate-400">小見出し</span>
+                      </div>
+                      <div className="border-t border-slate-100 my-2" />
+                      <div className="flex justify-between">
+                        <code className="bg-slate-100 px-1.5 py-0.5 rounded">**太字**</code>
+                        <span className="text-slate-400">太字</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <code className="bg-slate-100 px-1.5 py-0.5 rounded">*斜体*</code>
+                        <span className="text-slate-400">斜体</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <code className="bg-slate-100 px-1.5 py-0.5 rounded">~~取消~~</code>
+                        <span className="text-slate-400">取り消し線</span>
+                      </div>
+                      <div className="border-t border-slate-100 my-2" />
+                      <div className="flex justify-between">
+                        <code className="bg-slate-100 px-1.5 py-0.5 rounded">- リスト</code>
+                        <span className="text-slate-400">箇条書き</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <code className="bg-slate-100 px-1.5 py-0.5 rounded">1. 番号</code>
+                        <span className="text-slate-400">番号付き</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <code className="bg-slate-100 px-1.5 py-0.5 rounded">&gt; 引用</code>
+                        <span className="text-slate-400">引用</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <code className="bg-slate-100 px-1.5 py-0.5 rounded">`コード`</code>
+                        <span className="text-slate-400">コード</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <code className="bg-slate-100 px-1.5 py-0.5 rounded">---</code>
+                        <span className="text-slate-400">水平線</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setIsExpanded(false)}
+                className="p-2 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                title="縮小"
+              >
+                <span className="material-symbols-outlined !text-xl">zoom_in_map</span>
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 p-8 overflow-y-auto max-w-4xl mx-auto w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <MarkdownEditor
+              content={selectedMemo.content}
+              onChange={(content) => {
+                setSelectedMemo({ ...selectedMemo, content });
+              }}
+              onBlur={() => handleUpdateMemo({ content: selectedMemo.content })}
+              placeholder="メモを入力... (見出しは # や ## で始めます)"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
