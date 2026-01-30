@@ -82,6 +82,7 @@ export default function TryPage() {
           onAddTodo={localEntry.addTodo}
           onUpdateTodo={localEntry.updateTodo}
           onDeleteTodo={localEntry.deleteTodo}
+          onReorderTodos={localEntry.reorderTodos}
           onAddNote={localEntry.addNote}
           onUpdateNote={localEntry.updateNote}
           onDeleteNote={localEntry.deleteNote}

@@ -217,6 +217,13 @@ export function useEntry(date: string, isAuthenticated: boolean) {
     }));
   }, [updateEntry]);
 
+  const reorderTodos = useCallback((reorderedTodos: Todo[]) => {
+    updateEntry((prev) => ({
+      ...prev,
+      todos: reorderedTodos.map((t, index) => ({ ...t, sortOrder: index })),
+    }));
+  }, [updateEntry]);
+
   // Note operations
   const addNote = useCallback((content: string, categoryId: string | null = null) => {
     updateEntry((prev) => ({
@@ -293,6 +300,7 @@ export function useEntry(date: string, isAuthenticated: boolean) {
     addTodo,
     updateTodo,
     deleteTodo,
+    reorderTodos,
     addNote,
     updateNote,
     deleteNote,

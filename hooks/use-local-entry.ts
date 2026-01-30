@@ -96,6 +96,19 @@ export function useLocalEntry(date: string) {
     });
   }, []);
 
+  const reorderTodos = useCallback((reorderedTodos: LocalTodo[]) => {
+    setEntry((prev) => {
+      if (!prev) return prev;
+      const updated = {
+        ...prev,
+        todos: reorderedTodos.map((t, index) => ({ ...t, sortOrder: index })),
+        updatedAt: Date.now(),
+      };
+      saveLocalEntry(updated);
+      return updated;
+    });
+  }, []);
+
   // Note operations
   const addNote = useCallback((content: string, categoryId: string | null = null) => {
     setEntry((prev) => {
@@ -196,6 +209,7 @@ export function useLocalEntry(date: string) {
     addTodo,
     updateTodo,
     deleteTodo,
+    reorderTodos,
     addNote,
     updateNote,
     deleteNote,

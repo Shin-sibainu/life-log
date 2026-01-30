@@ -7,6 +7,7 @@ import { useSession } from '@/lib/auth-client';
 
 export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const { data: session, isPending } = useSession();
   const router = useRouter();
 
@@ -33,6 +34,20 @@ export default function Home() {
   return (
     <>
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+
+      {/* Image Modal */}
+      {isImageModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setIsImageModalOpen(false)}
+        >
+          <img
+            alt="LifeLog Dashboard Interface"
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl cursor-zoom-out"
+            src="/hero-screenshot.png"
+          />
+        </div>
+      )}
 
       {/* Header */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md">
@@ -81,14 +96,21 @@ export default function Home() {
                 デモを見る
               </button>
             </div>
-            <div className="mt-24 border border-border rounded-lg overflow-hidden bg-neutral-50 p-4 shadow-sm max-w-4xl mx-auto">
-              <div className="aspect-video bg-white rounded border border-border flex items-center justify-center overflow-hidden">
+            <div
+              className="mt-24 border border-border rounded-lg overflow-hidden bg-neutral-50 p-4 shadow-sm max-w-4xl mx-auto cursor-pointer group"
+              onClick={() => setIsImageModalOpen(true)}
+            >
+              <div className="aspect-video bg-white rounded border border-border flex items-center justify-center overflow-hidden relative">
                 <img
                   alt="LifeLog Dashboard Interface"
-                  className="w-full h-full object-cover opacity-90"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDm1ZNx7GrG3eILAeguth4RRl4McwBSjzOCOE3h8zHcR6uWHHZt_y-eX3smyCHaI9-7sPEixJ9WyDMwIP_3e4qtUvaiQbwk1EU4LQRjqgQUWbIHMelhbJzWHwsGWeNeQEPD2xSn_ox4lKulItPKwQUb4q32VvgDGnobvz0g5ZigDp_IJHDsYdpTwAbI6yNv5DUE3c38-DJs-U4fcC81NX56x46sYI0YtBCrstYX-44qT7y4rL8iQoeeLug_6k69-jn5s0oeegiJgsJ1"
+                  className="w-full h-full object-cover"
+                  src="/hero-screenshot.png"
                 />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
+                  <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 transition-opacity text-4xl drop-shadow-lg">zoom_in</span>
+                </div>
               </div>
+              <p className="text-xs text-slate-400 mt-2 text-center">クリックで拡大</p>
             </div>
           </div>
         </section>

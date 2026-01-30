@@ -12,6 +12,14 @@ interface Category {
   color: string | null;
 }
 
+interface Todo {
+  id: string;
+  content: string;
+  isCompleted: boolean;
+  note: string | null;
+  sortOrder: number;
+}
+
 interface EntryEditorProps {
   entry: LocalEntry;
   categories: Category[];
@@ -20,6 +28,7 @@ interface EntryEditorProps {
   onAddTodo: (content: string) => void;
   onUpdateTodo: (id: string, updates: { content?: string; isCompleted?: boolean; note?: string | null }) => void;
   onDeleteTodo: (id: string) => void;
+  onReorderTodos?: (todos: Todo[]) => void;
   onAddNote: (content: string, categoryId: string | null) => void;
   onUpdateNote: (id: string, updates: { content?: string; categoryId?: string | null }) => void;
   onDeleteNote: (id: string) => void;
@@ -57,6 +66,7 @@ export function EntryEditor({
   onAddTodo,
   onUpdateTodo,
   onDeleteTodo,
+  onReorderTodos,
   onAddNote,
   onUpdateNote,
   onDeleteNote,
@@ -167,6 +177,7 @@ export function EntryEditor({
             onAdd={onAddTodo}
             onUpdate={onUpdateTodo}
             onDelete={onDeleteTodo}
+            onReorder={onReorderTodos}
           />
 
           <LinkSection

@@ -125,6 +125,7 @@ function DashboardContent() {
       onAddTodo={entryHook.addTodo}
       onUpdateTodo={entryHook.updateTodo}
       onDeleteTodo={entryHook.deleteTodo}
+      onReorderTodos={entryHook.reorderTodos}
       onAddNote={entryHook.addNote}
       onUpdateNote={entryHook.updateNote}
       onDeleteNote={entryHook.deleteNote}
