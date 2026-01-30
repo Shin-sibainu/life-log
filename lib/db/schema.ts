@@ -117,6 +117,35 @@ export const links = sqliteTable('links', {
   index('idx_links_entry').on(table.entryId),
 ]);
 
+// Memo Categories table (separate from daily log categories)
+export const memoCategories = sqliteTable('memo_categories', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  color: text('color'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+}, (table) => [
+  index('idx_memo_categories_user').on(table.userId),
+  uniqueIndex('idx_memo_categories_user_name').on(table.userId, table.name),
+]);
+
+// Memos table (long-form notes separate from daily logs)
+export const memos = sqliteTable('memos', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  categoryId: text('category_id').references(() => memoCategories.id, { onDelete: 'set null' }),
+  title: text('title').notNull(),
+  content: text('content').notNull().default(''),
+  date: text('date').notNull(), // YYYY-MM-DD
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+}, (table) => [
+  index('idx_memos_user').on(table.userId),
+  index('idx_memos_category').on(table.categoryId),
+  index('idx_memos_date').on(table.date),
+]);
+
 // API Keys table
 export const apiKeys = sqliteTable('api_keys', {
   id: text('id').primaryKey(),
@@ -145,3 +174,7 @@ export type Link = typeof links.$inferSelect;
 export type NewLink = typeof links.$inferInsert;
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type NewApiKey = typeof apiKeys.$inferInsert;
+export type MemoCategory = typeof memoCategories.$inferSelect;
+export type NewMemoCategory = typeof memoCategories.$inferInsert;
+export type Memo = typeof memos.$inferSelect;
+export type NewMemo = typeof memos.$inferInsert;

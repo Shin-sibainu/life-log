@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 
 const navigation = [
   { name: '今日のログ', href: '/dashboard', icon: 'edit_note' },
+  { name: 'メモ', href: '/memos', icon: 'description' },
   { name: '積み重ね', href: '/calendar', icon: 'local_fire_department' },
   { name: '分析レポート', href: '/analytics', icon: 'bar_chart' },
   { name: '設定', href: '/settings', icon: 'settings' },
