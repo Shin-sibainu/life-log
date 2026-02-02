@@ -30,6 +30,7 @@ export default function MemosPage() {
   const [selectedMemo, setSelectedMemo] = useState<Memo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'pending' | 'saving' | 'saved'>('idle');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -146,8 +147,9 @@ export default function MemosPage() {
   };
 
   // Update memo (immediate)
-  const saveUpdates = useCallback(async (memoId: string, updates: Partial<Memo>) => {
+  const saveUpdates = useCallback(async (memoId: string, updates: Partial<Memo>, showStatus = true) => {
     setIsSaving(true);
+    if (showStatus) setSaveStatus('saving');
     try {
       const res = await fetch(`/api/memos/${memoId}`, {
         method: 'PUT',
@@ -168,9 +170,15 @@ export default function MemosPage() {
         if (updates.categoryId) {
           setExpandedCategories((prev) => new Set([...prev, updates.categoryId as string]));
         }
+        if (showStatus) {
+          setSaveStatus('saved');
+          // Hide after 2 seconds
+          setTimeout(() => setSaveStatus('idle'), 2000);
+        }
       }
     } catch (error) {
       console.error('Failed to update memo:', error);
+      if (showStatus) setSaveStatus('idle');
     } finally {
       setIsSaving(false);
     }
@@ -179,6 +187,9 @@ export default function MemosPage() {
   // Debounced auto-save for content and title
   const handleAutoSave = useCallback((updates: Partial<Memo>) => {
     if (!selectedMemo) return;
+
+    // Show pending status
+    setSaveStatus('pending');
 
     // Merge with pending updates
     pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...updates };
@@ -191,7 +202,7 @@ export default function MemosPage() {
     // Set new timer (1 second debounce)
     saveTimerRef.current = setTimeout(() => {
       if (selectedMemo && Object.keys(pendingUpdatesRef.current).length > 0) {
-        saveUpdates(selectedMemo.id, pendingUpdatesRef.current);
+        saveUpdates(selectedMemo.id, pendingUpdatesRef.current, true);
         pendingUpdatesRef.current = {};
       }
     }, 1000);
@@ -686,6 +697,36 @@ export default function MemosPage() {
               placeholder="メモを入力... (見出しは # や ## で始めます)"
             />
           </div>
+        </div>
+      )}
+
+      {/* Auto-save toast notification */}
+      {saveStatus !== 'idle' && (
+        <div className={`
+          fixed bottom-4 right-4 z-50
+          px-4 py-2 rounded-lg shadow-lg
+          flex items-center gap-2
+          transition-all duration-300 ease-in-out
+          ${saveStatus === 'saved' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-white text-slate-600 border border-slate-200'}
+        `}>
+          {saveStatus === 'pending' && (
+            <>
+              <span className="material-symbols-outlined !text-lg text-slate-400">edit</span>
+              <span className="text-sm">編集中...</span>
+            </>
+          )}
+          {saveStatus === 'saving' && (
+            <>
+              <span className="material-symbols-outlined !text-lg animate-spin">sync</span>
+              <span className="text-sm">保存中...</span>
+            </>
+          )}
+          {saveStatus === 'saved' && (
+            <>
+              <span className="material-symbols-outlined !text-lg text-green-600">check_circle</span>
+              <span className="text-sm">保存しました</span>
+            </>
+          )}
         </div>
       )}
     </div>
