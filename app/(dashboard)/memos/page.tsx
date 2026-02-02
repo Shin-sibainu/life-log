@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from '@/lib/auth-client';
 import { MarkdownEditor } from '@/components/memo/markdown-editor';
 
@@ -37,6 +37,8 @@ export default function MemosPage() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [addingMemoToCategoryId, setAddingMemoToCategoryId] = useState<string | null | undefined>(undefined);
   const [showSidebar, setShowSidebar] = useState(false);
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingUpdatesRef = useRef<Partial<Memo>>({});
 
   // Fetch categories
   const fetchCategories = useCallback(async () => {
@@ -143,12 +145,11 @@ export default function MemosPage() {
     return memos.filter((m) => m.categoryId === categoryId);
   };
 
-  // Update memo
-  const handleUpdateMemo = async (updates: Partial<Memo>) => {
-    if (!selectedMemo) return;
+  // Update memo (immediate)
+  const saveUpdates = useCallback(async (memoId: string, updates: Partial<Memo>) => {
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/memos/${selectedMemo.id}`, {
+      const res = await fetch(`/api/memos/${memoId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
@@ -161,11 +162,10 @@ export default function MemosPage() {
           categoryColor: categories.find((c) => c.id === data.memo.categoryId)?.color || null,
         };
         setMemos((prev) =>
-          prev.map((m) => (m.id === selectedMemo.id ? updatedMemo : m))
+          prev.map((m) => (m.id === memoId ? updatedMemo : m))
         );
-        setSelectedMemo(updatedMemo);
         // Expand the new category if category changed
-        if (updates.categoryId && updates.categoryId !== selectedMemo.categoryId) {
+        if (updates.categoryId) {
           setExpandedCategories((prev) => new Set([...prev, updates.categoryId as string]));
         }
       }
@@ -174,7 +174,51 @@ export default function MemosPage() {
     } finally {
       setIsSaving(false);
     }
+  }, [categories]);
+
+  // Debounced auto-save for content and title
+  const handleAutoSave = useCallback((updates: Partial<Memo>) => {
+    if (!selectedMemo) return;
+
+    // Merge with pending updates
+    pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...updates };
+
+    // Clear existing timer
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    // Set new timer (1 second debounce)
+    saveTimerRef.current = setTimeout(() => {
+      if (selectedMemo && Object.keys(pendingUpdatesRef.current).length > 0) {
+        saveUpdates(selectedMemo.id, pendingUpdatesRef.current);
+        pendingUpdatesRef.current = {};
+      }
+    }, 1000);
+  }, [selectedMemo, saveUpdates]);
+
+  // Immediate save (for category/date changes)
+  const handleUpdateMemo = async (updates: Partial<Memo>) => {
+    if (!selectedMemo) return;
+
+    // Clear any pending auto-save
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    pendingUpdatesRef.current = {};
+
+    await saveUpdates(selectedMemo.id, updates);
   };
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
 
   // Delete memo
   const handleDeleteMemo = async (id: string) => {
@@ -379,9 +423,10 @@ export default function MemosPage() {
                 type="text"
                 value={selectedMemo.title}
                 onChange={(e) => {
-                  setSelectedMemo({ ...selectedMemo, title: e.target.value });
+                  const newTitle = e.target.value;
+                  setSelectedMemo({ ...selectedMemo, title: newTitle });
+                  handleAutoSave({ title: newTitle });
                 }}
-                onBlur={() => handleUpdateMemo({ title: selectedMemo.title })}
                 className="text-base md:text-lg font-medium text-slate-900 bg-transparent border-none outline-none flex-1 min-w-0"
                 placeholder="タイトル"
               />
@@ -503,8 +548,8 @@ export default function MemosPage() {
                 content={selectedMemo.content}
                 onChange={(content) => {
                   setSelectedMemo({ ...selectedMemo, content });
+                  handleAutoSave({ content });
                 }}
-                onBlur={() => handleUpdateMemo({ content: selectedMemo.content })}
                 placeholder="メモを入力... (見出しは # や ## で始めます)"
               />
             </div>
@@ -545,9 +590,10 @@ export default function MemosPage() {
               type="text"
               value={selectedMemo.title}
               onChange={(e) => {
-                setSelectedMemo({ ...selectedMemo, title: e.target.value });
+                const newTitle = e.target.value;
+                setSelectedMemo({ ...selectedMemo, title: newTitle });
+                handleAutoSave({ title: newTitle });
               }}
-              onBlur={() => handleUpdateMemo({ title: selectedMemo.title })}
               className="text-xl font-medium text-slate-900 bg-transparent border-none outline-none flex-1"
               placeholder="タイトル"
             />
@@ -635,8 +681,8 @@ export default function MemosPage() {
               content={selectedMemo.content}
               onChange={(content) => {
                 setSelectedMemo({ ...selectedMemo, content });
+                handleAutoSave({ content });
               }}
-              onBlur={() => handleUpdateMemo({ content: selectedMemo.content })}
               placeholder="メモを入力... (見出しは # や ## で始めます)"
             />
           </div>
